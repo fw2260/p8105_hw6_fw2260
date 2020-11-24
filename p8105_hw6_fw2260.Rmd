@@ -12,6 +12,13 @@ library(tidyverse)
 ## Problem 1
 
 ```{r}
+hom_df <- read_csv("./data/homicide-data.csv")
+```
 
+
+## Problem 2
+
+```{r}
+weight_df <- read_csv("./data/birthweight.csv")
 ```
 
