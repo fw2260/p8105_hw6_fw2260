@@ -1,0 +1,17 @@
+---
+title: "Homework 6"
+author: "Lily Wang"
+date: "11/24/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+## Problem 1
+
+```{r}
+
+```
+
