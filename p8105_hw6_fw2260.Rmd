@@ -7,6 +7,8 @@ output: github_document
 
 ```{r setup, include=FALSE}
 library(tidyverse)
+library(modelr)
+library(mgcv)
 ```
 
 ## Problem 1
@@ -81,13 +83,49 @@ It seems that in a majority of the cities, the odds of a male victim case being 
 ## Problem 2
 
 ```{r}
-weight_df <- read_csv("./data/birthweight.csv")
+weight_df <- read_csv("./data/birthweight.csv") %>% 
+  mutate(babysex = as.factor(babysex),
+         frace = as.factor(frace),
+         mrace = as.factor(mrace),
+         malform = as.factor(malform))
 
-lm(bwt ~ gaweeks, data = weight_df)
+lm(bwt ~ fincome + smoken + fincome*smoken, data = weight_df)
 
   
 ```
 
+I assume a baby's immediate physical attributes and measurements would be highly correlated with its weight, so instead, I would like to explore how predictive the mother's environment during pregnancy is of birth weight. From prior knowledge, I know that smoking and stress both have adverse effects on fetuses, and low family income may cause the mother a lot of stress.
+
+Compare my proposed model with the two others listed:
+
+```{r}
+cv_df = 
+  crossv_mc(weight_df, 100) %>% 
+  mutate(
+    proposed_mod  = map(train, ~lm(bwt ~ fincome + smoken + fincome*smoken, data = .x)),
+    ga_mod  = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+    interaction_mod  = map(train, ~lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = .x))) %>% 
+  mutate(
+    rmse_proposed = map2_dbl(proposed_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_ga = map2_dbl(ga_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_interaction = map2_dbl(interaction_mod, test, ~rmse(model = .x, data = .y)))
+```
+
+Now to compare the three models by plotting the prediction error distribution for each:
+
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
+My proposed model had the worst predictive accuracy. 
 
 ## Problem 3
 
