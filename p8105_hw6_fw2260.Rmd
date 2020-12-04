@@ -88,15 +88,24 @@ weight_df <- read_csv("./data/birthweight.csv") %>%
          frace = as.factor(frace),
          mrace = as.factor(mrace),
          malform = as.factor(malform))
-
-lm(bwt ~ fincome + smoken + fincome*smoken, data = weight_df)
-
-  
 ```
 
-I assume a baby's immediate physical attributes and measurements would be highly correlated with its weight, so instead, I would like to explore how predictive the mother's environment during pregnancy is of birth weight. From prior knowledge, I know that smoking and stress both have adverse effects on fetuses, and low family income may cause the mother a lot of stress.
+I assume a baby's immediate physical attributes and measurements would be highly correlated with its weight, so instead, I would like to explore how accurately the mother's environment during pregnancy can predict birth weight. From prior knowledge, I know that smoking and stress both have adverse effects on fetuses, and low family income may cause the mother a lot of stress. Therefore, I will make a model using family income, average number of cigarettes smoked during pregnancy, and the interaction between the two, because number of cigarettes smoked may differ depending on income:
 
-Compare my proposed model with the two others listed:
+```{r}
+proposed_model <- lm(bwt ~ fincome + smoken + fincome*smoken, data = weight_df)
+```
+
+Plotting fitted values against the residuals:
+
+```{r}
+weight_df %>% 
+  add_residuals(proposed_model) %>% 
+  add_predictions(proposed_model) %>% 
+  ggplot(aes(x = pred, y = resid)) + geom_point()
+```
+
+Comparing my proposed model with the two others listed:
 
 ```{r}
 cv_df = 
@@ -125,7 +134,7 @@ cv_df %>%
   ggplot(aes(x = model, y = rmse)) + geom_violin()
 ```
 
-My proposed model had the worst predictive accuracy. 
+My proposed model had the worst predictive accuracy and the model with length, head circumference, sex, and all of their interactions had the best predictive accuracy, which is unsurprising. 
 
 ## Problem 3
 
