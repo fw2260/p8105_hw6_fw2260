@@ -9,6 +9,8 @@ output: github_document
 library(tidyverse)
 library(modelr)
 library(mgcv)
+
+set.seed(1)
 ```
 
 ## Problem 1
@@ -138,6 +140,8 @@ My proposed model had the worst predictive accuracy and the model with length, h
 
 ## Problem 3
 
+Read in and tidy dataset:
+
 ```{r}
 weather_df = 
   rnoaa::meteo_pull_monitors(
@@ -150,5 +154,26 @@ weather_df =
     tmin = tmin / 10,
     tmax = tmax / 10) %>%
   select(name, id, everything())
+```
+
+Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of r-squared and beta's:
+
+```{r cache = T}
+results <-
+  weather_df %>% 
+  bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x)),
+    betas = map(models, broom::tidy),
+    rsquared = map(models, broom::glance)) %>%  
+  select(-strap, -models) 
+
+results %>% 
+  unnest(rsquared) %>% 
+  ggplot(aes(x = r.squared)) + geom_density()
+
+results %>% 
+  unnest(betas)
+
 ```
 
