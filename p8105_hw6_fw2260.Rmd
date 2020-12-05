@@ -2,7 +2,9 @@
 title: "Homework 6"
 author: "Lily Wang"
 date: "11/24/2020"
-output: github_document
+output: 
+  github_document:
+    pandoc_args: --webtex
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +17,7 @@ set.seed(1)
 
 ## Problem 1
 
-```{r}
+```{r read_hom}
 hom_df <- read_csv("./data/homicide-data.csv") %>% 
    mutate(
     victim_age = as.numeric(victim_age),
@@ -33,7 +35,7 @@ hom_df <- read_csv("./data/homicide-data.csv") %>%
 
 Start with one city: 
 
-```{r}
+```{r baltimore}
 baltimore_df <- hom_df %>% 
   filter(city_state == "Baltimore_MD")
 
@@ -50,7 +52,7 @@ glm(resolved ~ victim_age + victim_race + victim_sex, data = baltimore_df, famil
 
 Repeat across all cities:
 
-```{r}
+```{r all_cities}
 model_results_df <- hom_df %>% 
   nest(data = -city_state) %>% 
   mutate(
@@ -69,7 +71,7 @@ model_results_df <- hom_df %>%
 
 Plot OR by sex:
 
-```{r}
+```{r plot_or}
 model_results_df %>% 
   filter(term == "victim_sexMale") %>% 
   mutate(city_state = fct_reorder(city_state, OR)) %>% 
@@ -84,7 +86,7 @@ It seems that in a majority of the cities, the odds of a male victim case being 
 
 ## Problem 2
 
-```{r}
+```{r read_weight}
 weight_df <- read_csv("./data/birthweight.csv") %>% 
   mutate(babysex = as.factor(babysex),
          frace = as.factor(frace),
@@ -94,13 +96,13 @@ weight_df <- read_csv("./data/birthweight.csv") %>%
 
 I assume a baby's immediate physical attributes and measurements would be highly correlated with its weight, so instead, I would like to explore how accurately the mother's environment during pregnancy can predict birth weight. From prior knowledge, I know that smoking and stress both have adverse effects on fetuses, and low family income may cause the mother a lot of stress. Therefore, I will make a model using family income, average number of cigarettes smoked during pregnancy, and the interaction between the two, because number of cigarettes smoked may differ depending on income:
 
-```{r}
+```{r model}
 proposed_model <- lm(bwt ~ fincome + smoken + fincome*smoken, data = weight_df)
 ```
 
 Plotting fitted values against the residuals:
 
-```{r}
+```{r residuals}
 weight_df %>% 
   add_residuals(proposed_model) %>% 
   add_predictions(proposed_model) %>% 
@@ -109,7 +111,7 @@ weight_df %>%
 
 Comparing my proposed model with the two others listed:
 
-```{r}
+```{r compare_rmse}
 cv_df = 
   crossv_mc(weight_df, 100) %>% 
   mutate(
@@ -124,7 +126,7 @@ cv_df =
 
 Now to compare the three models by plotting the prediction error distribution for each:
 
-```{r}
+```{r plot_rmse}
 cv_df %>% 
   select(starts_with("rmse")) %>% 
   pivot_longer(
@@ -142,7 +144,7 @@ My proposed model had the worst predictive accuracy and the model with length, h
 
 Read in and tidy dataset:
 
-```{r}
+```{r weather}
 weather_df = 
   rnoaa::meteo_pull_monitors(
     c("USW00094728"),
@@ -156,10 +158,10 @@ weather_df =
   select(name, id, everything())
 ```
 
-Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of r-squared and beta's:
+Use 5000 bootstrap samples and, for each bootstrap sample, find estimates of $\hat{r}^2$ and $log(\hat\beta_0 * \hat\beta_1)$, then plot their distributions:
 
-```{r cache = T}
-results <-
+```{r distributions, cache = T}
+results_df <-
   weather_df %>% 
   bootstrap(n = 5000) %>% 
   mutate(
@@ -168,12 +170,34 @@ results <-
     rsquared = map(models, broom::glance)) %>%  
   select(-strap, -models) 
 
-results %>% 
-  unnest(rsquared) %>% 
+rsquared_df <- results_df %>% 
+  select(-betas) %>% 
+  unnest(rsquared)
+
+rsquared_df %>%
   ggplot(aes(x = r.squared)) + geom_density()
 
-results %>% 
-  unnest(betas)
 
+betas_df <- results_df %>% 
+  select(-rsquared) %>% 
+  unnest(betas) %>% 
+  pivot_wider(.id:estimate,
+              names_from = term,
+              values_from = estimate) %>% 
+  rename("intercept" = "(Intercept)") %>% 
+  mutate(logproduct = log(intercept*tmin))
+
+betas_df %>% 
+  ggplot(aes(x = logproduct)) + geom_density()
+
+```
+
+The two distributions look relatively normal, though the peak of the $log(\hat\beta_0 * \hat\beta_1)$ distribution is quite sharp.
+
+Now to identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for $\hat{r}^2$ and $log(\hat\beta_0 * \hat\beta_1)$:
+
+```{r confint}
+quantile(pull(rsquared_df, r.squared), c(0.025, 0.975))
+quantile(pull(betas_df, logproduct), c(0.025, 0.975))
 ```
 
