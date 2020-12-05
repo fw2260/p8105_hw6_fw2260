@@ -201,3 +201,4 @@ quantile(pull(rsquared_df, r.squared), c(0.025, 0.975))
 quantile(pull(betas_df, logproduct), c(0.025, 0.975))
 ```
 
+For $\hat{r}^2$, the 95% CI is (`r unname(quantile(pull(rsquared_df, r.squared), 0.025))`, `r unname(quantile(pull(rsquared_df, r.squared), 0.975))`) and for $log(\hat\beta_0 * \hat\beta_1)$, the 95% CI is (`r unname(quantile(pull(betas_df, logproduct), 0.025))`, `r unname(quantile(pull(betas_df, logproduct), 0.975))`)
