@@ -86,6 +86,8 @@ It seems that in a majority of the cities, the odds of a male victim case being 
 
 ## Problem 2
 
+Read in and clean birthweight dataset:
+
 ```{r read_weight}
 weight_df <- read_csv("./data/birthweight.csv") %>% 
   mutate(babysex = as.factor(babysex),
@@ -98,6 +100,15 @@ I assume a baby's immediate physical attributes and measurements would be highly
 
 ```{r model}
 proposed_model <- lm(bwt ~ fincome + smoken + fincome*smoken, data = weight_df)
+```
+
+Let's look at a summary table of the model:
+
+```{r summary}
+proposed_model %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits = 3)
 ```
 
 Plotting fitted values against the residuals:
@@ -168,7 +179,7 @@ results_df <-
     models = map(strap, ~lm(tmax ~ tmin, data = .x)),
     betas = map(models, broom::tidy),
     rsquared = map(models, broom::glance)) %>%  
-  select(-strap, -models) 
+  select(-strap, -models)
 
 rsquared_df <- results_df %>% 
   select(-betas) %>% 
@@ -192,13 +203,6 @@ betas_df %>%
 
 ```
 
-The two distributions look relatively normal, though the peak of the $log(\hat\beta_0 * \hat\beta_1)$ distribution is quite sharp.
-
-Now to identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for $\hat{r}^2$ and $log(\hat\beta_0 * \hat\beta_1)$:
-
-```{r confint}
-quantile(pull(rsquared_df, r.squared), c(0.025, 0.975))
-quantile(pull(betas_df, logproduct), c(0.025, 0.975))
-```
+The two distributions look relatively normal, though there is a shoulder on the $\hat r^2$ and the peak of the $log(\hat\beta_0 * \hat\beta_1)$ distribution is quite sharp.
 
 For $\hat{r}^2$, the 95% CI is (`r unname(quantile(pull(rsquared_df, r.squared), 0.025))`, `r unname(quantile(pull(rsquared_df, r.squared), 0.975))`) and for $log(\hat\beta_0 * \hat\beta_1)$, the 95% CI is (`r unname(quantile(pull(betas_df, logproduct), 0.025))`, `r unname(quantile(pull(betas_df, logproduct), 0.975))`)
